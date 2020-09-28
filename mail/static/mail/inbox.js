@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelector('#archived').addEventListener('click', () => load_mailbox('archive'));
   document.querySelector('#compose').addEventListener('click', compose_email);
 
+  document.querySelector('#compose-form').onsubmit = send_email;
   // By default, load the inbox
   load_mailbox('inbox');
 });
@@ -20,6 +21,47 @@ function compose_email() {
   document.querySelector('#compose-recipients').value = '';
   document.querySelector('#compose-subject').value = '';
   document.querySelector('#compose-body').value = '';
+  
+}
+
+
+function send_email()
+{
+  const recipients = document.querySelector('#compose-recipients').value;
+  const subject = document.querySelector('#compose-subject').value;
+  const body = document.querySelector('#compose-body').value;
+  //console.log(recipients)
+
+  fetch('/emails', {
+    method: 'POST',
+    body: JSON.stringify({
+        recipients: recipients,
+        subject: subject,
+        body: body,
+    })
+  })
+  .then(response => response.json())
+      .then(result => {
+        if ("message" in result) {
+            // The email was sent successfully!
+            load_mailbox('sent');
+        }
+
+        if ("error" in result) {
+            // There was an error in sending the email
+            // Display the error next to the "To:"
+            document.querySelector('#to-text-error-message').innerHTML = result['error']
+
+        }
+        console.log(result);
+        console.log("message" in result);
+        console.log("error" in result);
+      })
+        .catch(error => {
+            // we hope this code is never executed, but who knows?
+            console.log(error);
+        });
+  return false;
 }
 
 function load_mailbox(mailbox) {
@@ -27,7 +69,28 @@ function load_mailbox(mailbox) {
   // Show the mailbox and hide other views
   document.querySelector('#emails-view').style.display = 'block';
   document.querySelector('#compose-view').style.display = 'none';
+  document.querySelector('#compose-form').style.display = 'none';
 
   // Show the mailbox name
   document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3>`;
+
+  if(mailbox=="inbox")
+  {
+    fetch('/emails/inbox')
+      .then(response => response.json())
+        .then(emails => {
+        // Print emails
+        emails.forEach(email => {
+          console.log(email.sender)
+          console.log(email.recipients)
+
+          var item = document.createElement("div");
+          item.innerHTML = `<div>${email.subject} | ${email.recipients} | ${email.timestamp} </div>`;
+          document.querySelector("#emails-view").appendChild(item);
+        });
+
+      // ... do something else with emails ...
+});
+  }
+
 }
